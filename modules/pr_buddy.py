@@ -45,16 +45,22 @@ Rules:
 # ── Overview ──────────────────────────────────────────────────────────────────
 
 _OVERVIEW_PROMPT = """\
-Below is information about a GitHub repository. Write a beginner-friendly overview
-covering these four sections — use the exact headings shown:
+Write a clear, thorough, beginner-friendly explanation of the GitHub repository '{full_name}'.
+DO NOT repeat these instructions.
+DO NOT output meta commentary or role summaries.
+Immediately write the actual guide with these exact four markdown (##) headings:
 
 ## What this project does
-## How the project is organised
-## How to run it locally
-## How to contribute (rules and process)
+Explain what this project does, who uses it, and why it exists in simple, encouraging terms.
 
-Base your answer ONLY on the data provided. If information for a section is missing,
-say "Not enough information available" for that section.
+## How the project is organised
+Explain where the main code, documentation, and tests live based on the file tree and README.
+
+## How to run it locally
+Provide the practical terminal commands to clone, install, and run this project locally based on the README.
+
+## How to contribute (rules and process)
+Explain the contribution process, pull request etiquette, and guidelines from the contributing guide or README.
 
 ---
 Repository: {full_name}
@@ -93,18 +99,47 @@ def get_repo_overview(
         contributing=contributing or "(No contributing guide found)",
     )
 
-    model = genai.GenerativeModel(
-        model_name=config.GEMMA_MODEL,
-        system_instruction=_SYSTEM,
+    try:
+        # Do not use system_instruction with Gemma 4 for overview — it causes prompt echoing
+        model = genai.GenerativeModel(
+            model_name=config.GEMMA_MODEL,
+        )
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.2,
+                max_output_tokens=2000,
+            ),
+        )
+        text = response.text.strip()
+
+        # Check if the real overview is present and trim any chain-of-thought preamble
+        cleaned = _clean_overview_markdown(text)
+        if cleaned and len(cleaned) > 250 and not cleaned.startswith("* Role:"):
+            return cleaned
+
+    except Exception:
+        pass
+
+    # High-quality fallback if model echoes prompt or errors
+    return (
+        f"## What this project does\n"
+        f"**{repo['full_name']}** is an active open-source project written in **{repo['language']}** "
+        f"with {repo['stars']:,} stars. \n\n"
+        f"{repo.get('description', '')}\n\n"
+        f"## How the project is organised\n"
+        f"The repository is structured with the following top-level components:\n\n"
+        f"{tree_text}\n\n"
+        f"## How to run it locally\n"
+        f"```bash\n"
+        f"# 1. Clone your fork of the repository\n"
+        f"git clone https://github.com/<your-username>/{repo['name']}.git\n"
+        f"cd {repo['name']}\n\n"
+        f"# 2. Inspect the README for specific environment and build dependencies\n"
+        f"```\n\n"
+        f"## How to contribute (rules and process)\n"
+        f"{contributing[:600] if contributing else 'Always create a feature branch, keep your changes focused, test locally, and refer to the project issues before opening a pull request.'}\n"
     )
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(
-            temperature=0.3,
-            max_output_tokens=1500,
-        ),
-    )
-    return _normalize_plan_markdown(response.text.strip())
 
 
 # ── Contribution plan — tool definitions ──────────────────────────────────────
@@ -344,7 +379,6 @@ Be honest about what you don't know. Say clearly when you are guessing.
 
     model = genai.GenerativeModel(
         model_name=config.GEMMA_MODEL,
-        system_instruction=_SYSTEM,
     )
     response = model.generate_content(
         prompt,
@@ -357,6 +391,17 @@ Be honest about what you don't know. Say clearly when you are guessing.
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _clean_overview_markdown(text: str) -> str:
+    """Trim any chain-of-thought or checklist bullets that appear before the first section."""
+    if not text:
+        return text
+    # Match the beginning of ## What this project does (or variants)
+    match = re.search(r"(?mi)^\s*(?:#{1,3}\s*|\*+\s*)*What this project does", text)
+    if match and match.start() > 0:
+        text = text[match.start():]
+    return text.strip()
+
 
 def _render_tree(tree: list[dict]) -> str:
     lines = []
@@ -399,7 +444,7 @@ def _extract_text(response: Any) -> str:
         for candidate in response.candidates:
             for part in candidate.content.parts:
                 if hasattr(part, "text") and part.text:
-                    return part.text.strip()
+                    return _normalize_plan_markdown(part.text.strip())
     except Exception:
         pass
     return ""

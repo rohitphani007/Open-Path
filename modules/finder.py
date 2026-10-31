@@ -200,7 +200,7 @@ def search_repositories(
     # Since good-first-issues:>0 is already a search filter, every result
     # is guaranteed to have at least one — mark them all as confirmed.
     for repo in repos:
-        repo["beginner_issues"] = repo.get("beginner_issues", 1)  # at least 1 confirmed
+        repo["beginner_issues"] = 1  # confirmed >= 1 via good-first-issues:>0 filter
 
     return repos, relaxation_note
 

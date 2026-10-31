@@ -538,6 +538,24 @@ if st.session_state.step >= 3 and st.session_state.selected_repo:
             )
 
         # ── Overview text (from PR Buddy) ─────────────────────────────────────────
+        # Auto-detect and fix if session state has a stale or echoed overview
+        current_ov = st.session_state.repo_overview
+        if not current_ov or len(current_ov) < 250 or "Role: PR Buddy" in current_ov or current_ov.startswith("* Role:"):
+            with st.spinner("🤖 PR Buddy is analyzing the repository..."):
+                current_ov = get_repo_overview(
+                    repo,
+                    st.session_state.repo_readme,
+                    st.session_state.repo_tree,
+                    st.session_state.repo_contributing,
+                )
+                st.session_state.repo_overview = current_ov
+
+        # Trim any chain-of-thought scratchpad bullets before the real documentation starts
+        if "What this project does" in st.session_state.repo_overview:
+            match = re.search(r"(?mi)^\s*(?:#{1,3}\s*|\*+\s*)*What this project does", st.session_state.repo_overview)
+            if match and match.start() > 0:
+                st.session_state.repo_overview = st.session_state.repo_overview[match.start():].strip()
+
         with st.container(border=True):
             st.markdown(st.session_state.repo_overview)
 
