@@ -1,145 +1,161 @@
-# 🛤️ OpenPath
+# OpenPath
 
-> **Helping beginner developers make their very first open-source contribution with confidence.**
+**Helping beginner developers make their first open-source contribution with confidence.**
 
-OpenPath solves the two biggest hurdles newcomers face when getting into open source:
-1. **Discovery:** Finding active, welcoming repositories tailored to their language, skill level, and interests (no dead or intimidating projects).
-2. **Guidance:** Demystifying unfamiliar codebases, picking a manageable issue, and building a concrete step-by-step contribution plan.
+Built for Hacktoberfest Hack Day Hyderabad x AI Community Hyderabad (31 October 2026). Powered by Google Gemma 4 and the GitHub REST API. Released under the MIT license.
 
-Powered by **Google Gemma 4** (via Google AI Studio) and the **GitHub REST API**, OpenPath acts as an advisory companion that guides you from curiosity to opening your first pull request.
+Live demo: not deployed yet (a Cloudways deployment is planned, see "Deployment" below).
 
----
+## The problem
 
-## 🌟 Key Features
+Most beginners want to contribute to open source but get stuck in two places:
 
-- **Personalized Repo Finder:** Queries live GitHub repositories filtered for recent activity, active maintainers, and confirmed beginner-friendly issues (`good first issue`).
-- **AI Ranking & Fit Explanations:** **Gemma 4** (`gemma-4-26b-a4b-it`) analyzes candidate repositories against the developer's profile and returns structured rationale for why each project fits.
-- **Repository Deep Dive:** PR Buddy breaks down project structure, how to run the repo locally, and key contribution rules from `CONTRIBUTING.md`.
-- **Actionable Contribution Plans:** For any selected beginner issue, Gemma 4 provides:
-  - What the issue actually asks for (stripping template boilerplate).
-  - Files likely involved.
-  - Step-by-step instructions (fork, branch, edit, test, commit).
-  - Pre-submission checklist.
-  - **Ready-to-use Draft Pull Request title and description** in a 1-click copy box.
-- **Privacy & Safety First:** OpenPath is strictly advisory. It never modifies repositories, makes commits, or submits PRs on your behalf.
+1. **Discovery.** It is hard to tell which repositories are active, welcoming and a good match for your language and skill level. Many repos are dead or far too big to start with.
+2. **Guidance.** Even after picking a repo, a beginner doesn't know how it is organised, which issue to take, or what a first contribution actually involves.
 
----
+## What OpenPath does
 
-## 🏗️ Architecture
+You tell OpenPath your languages, interests and experience level. It then:
+
+1. Searches live GitHub data for active repositories that have open beginner-friendly issues (`good first issue`).
+2. Uses Gemma 4 to rank those repositories against your profile and explain, in plain language, why each one fits you.
+3. Lets you pick a repository, then explains its structure, how to run it locally, and its contribution rules (from `CONTRIBUTING.md` when available).
+4. Lets you pick a beginner issue and produces a concrete plan: what the issue really asks for, which files are likely involved, step-by-step instructions (fork, branch, edit, test, commit), a pre-submission checklist, and a draft pull request title and description you can copy.
+
+OpenPath is advisory only. It never forks, edits, commits to or opens pull requests on any repository.
+
+## How it works
 
 ```
-User Profile Form (Sidebar)
-       │
-       ▼
-[modules/finder.py] ──────► GitHub Search API
-                             (filtered by language, stars, pushed date, good-first-issues)
-       │
-       ▼
-[modules/ranker.py] ──────► Google Gemma 4 API
-                             (structured JSON ranking & personalized reasoning)
-       │
-  Select Repo
-       │
-       ▼
-[modules/github_data.py] ──► GitHub REST API
-                             (fetches README, tree, contributing guide, good-first-issues)
-       │
-  Select Issue
-       │
-       ▼
-[modules/pr_buddy.py] ────► Google Gemma 4 API (with tool use)
-                             (inspects files, produces step-by-step plan & PR draft)
-       │
-       ▼
-Streamlit Interactive UI (app.py)
+User profile form (sidebar)
+        |
+        v
+modules/finder.py -------> GitHub Search API
+                           (language, stars, recent activity, good-first-issues, not archived)
+        |
+        v
+modules/ranker.py -------> Gemma 4 via Gemini API
+                           (structured JSON ranking and reasons per repo)
+        |
+   user selects a repo
+        |
+        v
+modules/github_data.py --> GitHub REST API
+                           (README, file tree, contributing guide, beginner issues)
+        |
+   user selects an issue
+        |
+        v
+modules/pr_buddy.py -----> Gemma 4 (with tool use)
+                           (reads files on request, writes the plan and PR draft)
+        |
+        v
+app.py: Streamlit interface
 ```
 
----
+## Tech stack
 
-## 🚀 Quickstart (Local Development)
+- Python 3.10 or newer
+- Streamlit for the interface
+- Google Gemma 4 (`gemma-4-26b-a4b-it` by default) through the Gemini API and Google AI Studio, using the `google-genai` SDK
+- GitHub REST API through `requests`
+- `python-dotenv` for configuration
+
+## Getting started
 
 ### 1. Prerequisites
-- Python 3.10+
-- A GitHub Personal Access Token (free, public read access only)
-- A Google AI Studio API Key (with access to Gemma 4)
 
-### 2. Clone and Setup Environment
+- Python 3.10 or newer
+- A GitHub personal access token (free; only public read access is needed)
+- A Google AI Studio API key with access to Gemma 4
+
+### 2. Clone and install
+
 ```bash
-git clone https://github.com/your-username/openpath.git
-cd openpath
+git clone https://github.com/rohitphani007/Open-Path.git
+cd Open-Path
 
-# Create and activate virtual environment
 python -m venv venv
 
-# On Windows:
+# Windows:
 venv\Scripts\activate
-# On Linux/macOS:
+# macOS / Linux:
 source venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Configure Secrets
-Copy the `.env.example` template:
+### 3. Configure your keys
+
+Copy the example file and fill in your values:
+
 ```bash
 cp .env.example .env
 ```
-Open `.env` and fill in your keys:
-```env
+
+On Windows (Command Prompt) use `copy .env.example .env` instead.
+
+```
 GEMINI_API_KEY=your_google_ai_studio_key_here
 GITHUB_TOKEN=your_github_personal_access_token_here
 GEMMA_MODEL=gemma-4-26b-a4b-it
 ```
 
-### 4. Run the App
+Never commit your `.env` file. It is already listed in `.gitignore`.
+
+### 4. Run the app
+
 ```bash
 streamlit run app.py
 ```
-Open your browser at `http://localhost:8501`.
 
----
+Then open http://localhost:8501 in your browser.
 
-## ☁️ Deployment on Cloudways (DigitalOcean)
+## Project structure
 
-OpenPath is designed to deploy seamlessly to a Cloudways Flexible Server (Ubuntu 22.04 LTS / PHP-Stack or Custom Application):
+```
+app.py            Streamlit interface that ties the steps together
+config.py         Loads settings and keys from environment variables
+check_models.py   Helper script to check which models your API key can use
+modules/
+  finder.py       Searches GitHub for suitable repositories
+  ranker.py       Ranks and explains repositories with Gemma 4
+  github_data.py  Fetches README, file tree, contributing guide and issues
+  pr_buddy.py     Repository overview and contribution plan with Gemma 4
+.env.example      Template for required environment variables
+```
 
-1. **SSH into your Cloudways server**:
-   ```bash
-   ssh master_username@your_server_ip
-   ```
-2. **Clone the repository**:
-   ```bash
-   cd /home/master/applications/your_app/public_html
-   git clone https://github.com/your-username/openpath.git .
-   ```
-3. **Set up Python environment**:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
-4. **Create `.env`**:
-   ```bash
-   cp .env.example .env
-   nano .env
-   ```
-5. **Run Streamlit in background with systemd or tmux/nohup**:
-   ```bash
-   nohup venv/bin/streamlit run app.py --server.port 8501 --server.address 0.0.0.0 > streamlit.log 2>&1 &
-   ```
-   *(Configure an Nginx reverse proxy from port 80/443 to port 8501 for domain mapping with SSL).*
+## Screenshots
 
----
+Screenshots of the profile form, the ranked results and the contribution plan will be added here.
 
-## 🏆 Hackathon Alignment
+## Limitations
 
-- **Best Use of Gemma 4:** Gemma 4 powers core project recommendation ranking, codebase onboarding, issue triage, and automated PR draft synthesis.
-- **Best Open-Source AI Project:** 100% open-source under the MIT license, using open-weight models and zero vendor lock-in.
-- **Best Use of Cloudways:** Fully deployable on DigitalOcean infrastructure via Cloudways.
+- The plans are suggestions written by an AI model. They can be wrong or incomplete, so always read the repository's own contributing guide before you start.
+- Large repositories cannot be sent to the model whole. OpenPath sends the README, the top-level file tree and only the files it needs, so the overview may miss details.
+- The GitHub API is rate limited. A personal access token is strongly recommended.
+- Only public repositories are supported.
 
----
+## Deployment (planned)
 
-## 📜 License
+A deployment on Cloudways (DigitalOcean) is planned after the hackathon submission. The steps below are a draft and have not been verified yet; this section and the live demo link at the top will be updated once the deployment is tested.
 
-Distributed under the [MIT License](LICENSE).
+1. Create a server on Cloudways and connect over SSH.
+2. Clone the repository, create a virtual environment and install `requirements.txt`.
+3. Create the `.env` file with your keys.
+4. Run Streamlit bound to the local address, for example `streamlit run app.py --server.port 8501 --server.address 127.0.0.1`, kept alive with a process manager such as systemd or tmux.
+5. Put a reverse proxy (Nginx) in front of port 8501 so the app is served over HTTP and HTTPS.
+
+## Hackathon categories
+
+- **Best Use of Gemma 4:** Gemma 4 powers the repository ranking, the codebase overview and the issue-to-plan step.
+- **Best Open-Source AI Project:** the project is MIT licensed and built around an open-weight model. The model is configurable through the `GEMMA_MODEL` setting.
+- **Best Use of Cloudways:** deployment is planned (see above).
+
+## Contributing
+
+Issues and pull requests are welcome. If you are new to open source, this is a good place to try your first contribution.
+
+## License
+
+Distributed under the MIT License. See the `LICENSE` file for details.
